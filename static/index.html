@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Archiver</title>
+  <style>
+    * { margin: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0a0a0a; color: #e0e0e0; }
+    .bar { display: flex; gap: 8px; padding: 12px 16px; background: #141414; border-bottom: 1px solid #222; }
+    .bar input { flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #e0e0e0; font-size: 14px; }
+    .bar input:focus { outline: none; border-color: #555; }
+    .bar button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; }
+    #go { background: #2563eb; color: #fff; }
+    #go:hover { background: #1d4ed8; }
+    #save { background: #222; color: #ccc; }
+    #save:hover { background: #333; }
+    #save:disabled { opacity: 0.4; cursor: default; }
+    #status { font-size: 13px; color: #888; align-self: center; white-space: nowrap; }
+    #status a { color: #60a5fa; }
+    #status .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #444; border-top-color: #60a5fa; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .bar button:disabled { opacity: 0.4; cursor: default; }
+    iframe { width: 100%; height: calc(100vh - 53px); border: none; background: #fff; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <input id="url" type="url" placeholder="Paste a URL..." autofocus>
+    <button id="go">Fetch</button>
+    <button id="save" disabled>Save snapshot</button>
+    <span id="status"></span>
+  </div>
+  <iframe id="frame" sandbox="allow-same-origin"></iframe>
+  <script>
+    const urlInput = document.getElementById('url');
+    const frame = document.getElementById('frame');
+    const goBtn = document.getElementById('go');
+    const saveBtn = document.getElementById('save');
+    const status = document.getElementById('status');
+    let currentUrl = '';
+
+    function setLoading(msg) {
+      status.innerHTML = '<span class="spinner"></span>' + msg;
+      goBtn.disabled = true;
+      saveBtn.disabled = true;
+    }
+    function clearLoading() {
+      goBtn.disabled = false;
+    }
+
+    async function doFetch() {
+      const url = urlInput.value.trim();
+      if (!url) return;
+      currentUrl = url;
+      setLoading('Rendering page with headless browser...');
+      try {
+        const resp = await fetch('/fetch?url=' + encodeURIComponent(url));
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: resp.statusText }));
+          status.textContent = 'Error: ' + (err.error || resp.statusText);
+          return;
+        }
+        const blob = await resp.blob();
+        frame.src = URL.createObjectURL(blob);
+        status.textContent = '';
+        saveBtn.disabled = false;
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        clearLoading();
+      }
+    }
+
+    goBtn.addEventListener('click', doFetch);
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') doFetch(); });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!currentUrl) return;
+      setLoading('Saving snapshot...');
+      try {
+        const resp = await fetch('/archive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: currentUrl }),
+        });
+        const data = await resp.json();
+        if (data.error) { status.textContent = 'Error: ' + data.error; return; }
+        status.innerHTML = 'Saved: <a href="' + data.link + '" target="_blank">' + data.link + '</a>';
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        clearLoading();
+        saveBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

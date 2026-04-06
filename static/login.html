@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Archiver - Login</title>
+  <style>
+    * { margin: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0a0a0a; color: #e0e0e0; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    .login { display: flex; flex-direction: column; gap: 12px; width: 300px; }
+    .login h1 { font-size: 20px; font-weight: 600; text-align: center; margin-bottom: 4px; }
+    .login input { padding: 10px 12px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #e0e0e0; font-size: 14px; }
+    .login input:focus { outline: none; border-color: #555; }
+    .login button { padding: 10px 16px; border-radius: 6px; border: none; background: #2563eb; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .login button:hover { background: #1d4ed8; }
+    .error { color: #f87171; font-size: 13px; text-align: center; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <div class="login">
+    <h1>Web Archiver</h1>
+    <input id="pw" type="password" placeholder="Password" autofocus>
+    <button id="go">Login</button>
+    <div class="error" id="err"></div>
+  </div>
+  <script>
+    const pw = document.getElementById('pw');
+    const err = document.getElementById('err');
+    async function login() {
+      err.textContent = '';
+      const resp = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw.value }),
+      });
+      if (resp.ok) { window.location.reload(); }
+      else { err.textContent = 'Wrong password'; pw.value = ''; pw.focus(); }
+    }
+    document.getElementById('go').addEventListener('click', login);
+    pw.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  </script>
+</body>
+</html>
