@@ -56,13 +56,14 @@
       setLoading('Rendering page with headless browser...');
       try {
         const resp = await fetch('/fetch?url=' + encodeURIComponent(url));
+        if (resp.status === 401) { window.location.reload(); return; }
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({ error: resp.statusText }));
           status.textContent = 'Error: ' + (err.error || resp.statusText);
           return;
         }
-        const blob = await resp.blob();
-        frame.src = URL.createObjectURL(blob);
+        const html = await resp.text();
+        frame.srcdoc = html;
         status.textContent = '';
         saveBtn.disabled = false;
       } catch (e) {

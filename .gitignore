@@ -4,3 +4,4 @@ archives/
 .env
 venv/
 fly.toml
+.github/

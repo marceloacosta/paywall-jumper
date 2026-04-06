@@ -1,4 +1,5 @@
 import atexit
+import hashlib
 import ipaddress
 import re
 import os
@@ -38,11 +39,16 @@ def check_daily_limit():
     return True
 
 
+def _pw_hash():
+    return hashlib.sha256(APP_PASSWORD.encode()).hexdigest()[:16]
+
+
 def require_auth():
     if not APP_PASSWORD:
         return None  # no password set = open (local dev)
-    if session.get("authed"):
+    if session.get("authed") == _pw_hash():
         return None
+    session.pop("authed", None)
     return jsonify(error="Unauthorized"), 401
 
 GOOGLEBOT_UA = (
@@ -186,7 +192,7 @@ def index():
 def login():
     password = request.json.get("password", "") if request.is_json else ""
     if password == APP_PASSWORD:
-        session["authed"] = True
+        session["authed"] = _pw_hash()
         return jsonify(ok=True)
     return jsonify(error="Wrong password"), 403
 
